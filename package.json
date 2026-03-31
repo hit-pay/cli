@@ -1,0 +1,49 @@
+{
+  "name": "@hit-pay/cli",
+  "version": "0.1.0",
+  "description": "HitPay CLI — manage payments, test webhooks, and generate QR codes from the terminal",
+  "type": "module",
+  "bin": {
+    "hitpay": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "hitpay",
+    "payments",
+    "cli",
+    "paynow",
+    "grabpay",
+    "qr",
+    "webhooks",
+    "southeast-asia"
+  ],
+  "author": "HitPay",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.3.2",
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "hitpay-mcp": "file:../hitpay-mcp",
+    "localtunnel": "^2.0.2",
+    "ora": "^8.2.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/qrcode-terminal": "^0.12.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.0.0"
+  }
+}
