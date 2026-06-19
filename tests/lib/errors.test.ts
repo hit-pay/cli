@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { HitPayApiError } from 'hitpay-mcp/client';
+import { HitPayApiError } from '../../src/lib/hitpay/client.js';
 
 describe('HitPayApiError', () => {
   it('creates error with status code and message', () => {

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import type { PaymentRequestResponse, PagePaginatedResponse } from 'hitpay-mcp/types';
-import { formatCurrency, formatPaymentMethod } from 'hitpay-mcp/formatters';
+import type { PaymentRequestResponse, PagePaginatedResponse } from '../lib/hitpay/types.js';
+import { formatCurrency, formatPaymentMethod } from '../lib/hitpay/formatters.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';

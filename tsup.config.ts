@@ -22,9 +22,5 @@ export default defineConfig({
     'localtunnel',
     'ora',
     'qrcode-terminal',
-    'hitpay-mcp',
-    'hitpay-mcp/client',
-    'hitpay-mcp/types',
-    'hitpay-mcp/formatters',
   ],
 });

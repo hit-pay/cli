@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import type { BeneficiaryResponse, CursorPaginatedResponse } from 'hitpay-mcp/types';
+import type { BeneficiaryResponse, CursorPaginatedResponse } from '../lib/hitpay/types.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';

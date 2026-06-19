@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { confirm } from '@inquirer/prompts';
-import type { TransferResponse, TransferEstimateResponse, CursorPaginatedResponse } from 'hitpay-mcp/types';
-import { formatCurrency } from 'hitpay-mcp/formatters';
+import type { TransferResponse, TransferEstimateResponse, CursorPaginatedResponse } from '../lib/hitpay/types.js';
+import { formatCurrency } from '../lib/hitpay/formatters.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';

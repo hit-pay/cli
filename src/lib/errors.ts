@@ -1,4 +1,4 @@
-import { HitPayApiError } from 'hitpay-mcp/client';
+import { HitPayApiError } from './hitpay/client.js';
 import * as output from './output.js';
 
 export function handleError(err: unknown): never {

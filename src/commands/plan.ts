@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { formatCurrency } from 'hitpay-mcp/formatters';
+import { formatCurrency } from '../lib/hitpay/formatters.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
