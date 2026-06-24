@@ -1,5 +1,5 @@
-import { HitPayClient } from 'hitpay-mcp/client';
-import type { Environment } from 'hitpay-mcp/client';
+import { HitPayClient } from './hitpay/client.js';
+import type { Environment } from './hitpay/client.js';
 import { readConfig } from './config.js';
 
 export function createClient(opts?: { apiKey?: string; environment?: string }): HitPayClient {

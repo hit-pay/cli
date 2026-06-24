@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import type { WebhookEventResponse } from 'hitpay-mcp/types';
+import type { WebhookEventResponse } from '../lib/hitpay/types.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';

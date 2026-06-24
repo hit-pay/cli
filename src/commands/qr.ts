@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import qrTerminal from 'qrcode-terminal';
-import { formatCurrency, formatPaymentMethod } from 'hitpay-mcp/formatters';
+import { formatCurrency, formatPaymentMethod } from '../lib/hitpay/formatters.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';

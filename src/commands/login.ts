@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { input, password } from '@inquirer/prompts';
-import { HitPayClient } from 'hitpay-mcp/client';
-import type { Environment } from 'hitpay-mcp/client';
+import { HitPayClient } from '../lib/hitpay/client.js';
+import type { Environment } from '../lib/hitpay/client.js';
 import { readConfig, writeConfig } from '../lib/config.js';
 import { createClient } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
