@@ -1,4 +1,5 @@
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { ForwardResult } from './forwarder';
 
 export interface WebhookEvent {
   headers: Record<string, string | string[] | undefined>;
@@ -6,7 +7,7 @@ export interface WebhookEvent {
   receivedAt: Date;
 }
 
-export type EventHandler = (event: WebhookEvent) => void;
+export type EventHandler = (event: WebhookEvent) => Promise<ForwardResult | undefined> | any;
 
 export function createWebhookServer(onEvent: EventHandler): {
   server: ReturnType<typeof createHttpServer>;
@@ -35,17 +36,27 @@ export function createWebhookServer(onEvent: EventHandler): {
         body = Object.fromEntries(new URLSearchParams(rawBody));
       }
 
-      onEvent({
+      const result = await onEvent({
         headers: req.headers as Record<string, string | string[] | undefined>,
         body,
         receivedAt: new Date(),
       });
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true }));
-    } catch {
-      res.writeHead(500);
-      res.end('Internal error');
+
+      if (!result || typeof result !== 'object' || typeof result.status !== 'number') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Event ignored by filter' }));
+        return;
+      }
+
+      const payload = typeof result.message === 'string' ? result.message : JSON.stringify(result.message);
+      res.writeHead(result.status, { 'Content-Type': 'application/json' });
+      res.end(payload);
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(500);
+        res.end('Internal error');
+      }
     }
   });
 

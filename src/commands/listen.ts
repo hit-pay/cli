@@ -7,7 +7,7 @@ import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
 import { createWebhookServer } from '../listen/server.js';
 import { createTunnel } from '../listen/tunnel.js';
-import { forwardEvent } from '../listen/forwarder.js';
+import { forwardEvent, ForwardResult } from '../listen/forwarder.js';
 import { printEvent } from '../listen/printer.js';
 
 export function registerListen(program: Command): void {
@@ -15,14 +15,14 @@ export function registerListen(program: Command): void {
     .command('listen')
     .description('Listen for webhook events and forward to your local server')
     .requiredOption('--forward-to <url>', 'Local URL to forward events to (e.g. http://localhost:3000/webhook)')
-    .option('--events <types>', 'Comma-separated event types to listen for')
+    .option('--events <events...>', 'Events to listen for')
     .option('--port <port>', 'Local port for the webhook receiver', '0')
     .action(async (opts, cmd) => {
       try {
         const globalOpts = cmd.parent?.opts() || {};
         const client = createClient({ environment: globalOpts.env });
         const forwardUrl = opts.forwardTo;
-        const eventFilter = opts.events ? opts.events.split(',').map((e: string) => e.trim()) : undefined;
+        const eventFilter = opts.events ? opts.events.map((e: string) => e.trim()) : undefined;
 
         let webhookId: string | undefined;
         let tunnelRef: { close: () => Promise<void> } | undefined;
@@ -61,13 +61,15 @@ export function registerListen(program: Command): void {
         // 1. Start local HTTP server
         const { start, stop, server } = createWebhookServer(async (event) => {
           // Filter events if specified
-          const eventType = String(event.headers['hitpay-event-type'] || event.body.event || '');
-          if (eventFilter && !eventFilter.some((f: string) => eventType.includes(f))) {
+          const eventObject = String(event.headers['hitpay-event-object'] || '');
+          const eventType = String(event.headers['hitpay-event-type'] || '');
+          const eventName = `${eventObject}.${eventType}`;
+          if (eventFilter && !eventFilter.includes(eventName)) {
             return;
           }
 
           // Forward to user's dev server
-          let result;
+          let result: ForwardResult | undefined;
           try {
             result = await forwardEvent(event, forwardUrl);
           } catch (err) {
@@ -76,6 +78,7 @@ export function registerListen(program: Command): void {
 
           // Print event in terminal
           printEvent(event, result);
+          return result;
         });
 
         serverRef = { stop };
@@ -89,10 +92,11 @@ export function registerListen(program: Command): void {
         // 3. Register webhook with HitPay
         spinner.text = 'Registering webhook endpoint...';
         const webhookBody: Record<string, unknown> = {
+          name: `Testing Webhook for ${forwardUrl}`,
           url: tunnel.url,
         };
         if (eventFilter) {
-          webhookBody.events = eventFilter;
+          webhookBody.event_types = eventFilter;
         }
 
         const webhook = await client.post<WebhookEventResponse>('/v1/webhook-events', webhookBody);

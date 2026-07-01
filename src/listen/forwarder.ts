@@ -3,6 +3,7 @@ import type { WebhookEvent } from './server.js';
 export interface ForwardResult {
   status: number;
   ok: boolean;
+  message: unknown;
   duration: number;
 }
 
@@ -24,9 +25,18 @@ export async function forwardEvent(
     body: JSON.stringify(event.body),
   });
 
+  const text = await res.text();
+  let message: unknown = text;
+  try {
+    message = JSON.parse(text);
+  } catch {
+    // Ignore and leave as text
+  }
+
   return {
     status: res.status,
     ok: res.ok,
+    message,
     duration: Date.now() - start,
   };
 }

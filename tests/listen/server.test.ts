@@ -42,7 +42,8 @@ describe('Webhook server', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'hitpay-event-type': 'charge.created',
+        'hitpay-event-object': 'charge',
+        'hitpay-event-type': 'created',
       },
       body: JSON.stringify({ amount: '100', currency: 'SGD', status: 'completed' }),
     });
@@ -50,7 +51,8 @@ describe('Webhook server', () => {
     expect(res.status).toBe(200);
     expect(events).toHaveLength(1);
     expect(events[0].body.amount).toBe('100');
-    expect(events[0].headers['hitpay-event-type']).toBe('charge.created');
+    expect(events[0].headers['hitpay-event-object']).toBe('charge');
+    expect(events[0].headers['hitpay-event-type']).toBe('created');
   });
 
   it('handles form-encoded POST body', async () => {
