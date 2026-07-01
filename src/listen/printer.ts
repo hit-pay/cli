@@ -4,14 +4,16 @@ import type { ForwardResult } from './forwarder.js';
 
 export function printEvent(event: WebhookEvent, forwardResult?: ForwardResult): void {
   const time = event.receivedAt.toISOString().split('T')[1].replace('Z', '');
-  const eventType = String(event.headers['hitpay-event-type'] || event.body.event || 'unknown');
+  const eventType = String(event.headers['hitpay-event-type'] || 'unknown');
+  const eventObject = String(event.headers['hitpay-event-object'] || 'unknown');
+  const eventName = `${eventObject}.${eventType}`;
   const status = String(event.body.status || '');
 
   // Event header
   console.log(
     chalk.dim(time) +
     ' ' +
-    chalk.bold.cyan(eventType) +
+    chalk.bold.cyan(eventName) +
     (status ? ` [${statusColor(status)}]` : ''),
   );
 

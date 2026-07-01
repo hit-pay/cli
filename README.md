@@ -216,7 +216,7 @@ npm test                       # Run tests
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 20.12.0+
 - A [HitPay account](https://dashboard.hit-pay.com/register) (sandbox available)
 
 ## License
