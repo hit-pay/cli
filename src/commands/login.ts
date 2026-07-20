@@ -1,56 +1,46 @@
 import { Command } from 'commander';
-import { input, password } from '@inquirer/prompts';
-import { HitPayClient } from '../lib/hitpay/client.js';
-import type { Environment } from '../lib/hitpay/client.js';
-import { readConfig, writeConfig } from '../lib/config.js';
-import { createClient } from '../lib/client.js';
+import {
+  clearProfileAuth,
+  getActiveEnvironment,
+  getAuthMethod,
+  getConfigPath,
+  getProfile,
+  readConfig,
+  resolveEnvironment,
+} from '../lib/config.js';
+import { createClientFromCmd, getResolvedApiUrl } from '../lib/client.js';
+import { loginWithOAuth } from '../lib/auth/oauth.js';
+import { getGlobalOpts } from '../lib/global-options.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
 
+const AUTH_HINT = 'Run `hitpay login` or `hitpay config set api_key <key>`.';
+
 export function registerLogin(program: Command): void {
   program
     .command('login')
-    .description('Authenticate with your HitPay API key')
-    .option('--api-key <key>', 'HitPay API key (or enter interactively)')
-    .option('--salt <salt>', 'Webhook signature salt')
-    .option('--environment <env>', 'sandbox or production', 'sandbox')
-    .action(async (opts) => {
+    .description('Sign in via browser (OAuth)')
+    .option('--oauth-port <port>', 'Local OAuth callback port', '8085')
+    .action(async (opts, cmd) => {
       try {
-        let apiKey = opts.apiKey;
-        let salt = opts.salt;
-        const env = opts.environment as Environment;
-
-        if (!apiKey) {
-          apiKey = await password({
-            message: 'Enter your HitPay API key:',
-            mask: '*',
-          });
-        }
-
-        if (!salt) {
-          salt = await password({
-            message: 'Enter your webhook salt (optional, press Enter to skip):',
-            mask: '*',
-          });
-        }
-
-        const spinner = createSpinner('Verifying API key...');
-        spinner.start();
-
-        const client = new HitPayClient(apiKey.trim(), env);
-        const valid = await client.verifyConnection();
-
-        if (!valid) {
-          spinner.fail('Invalid API key or unable to connect');
-          process.exit(1);
+        const globalOpts = getGlobalOpts(cmd);
+        if (globalOpts.env) {
+          throw new Error(
+            'Switch environment first with `hitpay env use <env>`, then run `hitpay login`.',
+          );
         }
 
         const config = readConfig();
-        config.api_key = apiKey.trim();
-        config.environment = env;
-        if (salt) config.salt = salt.trim();
-        writeConfig(config);
+        const env = getActiveEnvironment(config);
+
+        const spinner = createSpinner('Opening browser for sign-in...');
+        spinner.start();
+
+        await loginWithOAuth({
+          environment: env,
+          port: Number(opts.oauthPort),
+        });
 
         spinner.succeed(`Authenticated with HitPay (${env})`);
       } catch (err) {
@@ -62,14 +52,20 @@ export function registerLogin(program: Command): void {
 export function registerLogout(program: Command): void {
   program
     .command('logout')
-    .description('Remove stored HitPay credentials')
-    .action(async () => {
+    .description('Remove stored credentials for the active environment')
+    .option('--all', 'Also remove API key and webhook salt')
+    .action(async (opts, cmd) => {
       try {
         const config = readConfig();
-        delete config.api_key;
-        delete config.salt;
-        writeConfig(config);
-        output.success('Logged out. API key removed.');
+        const globalOpts = getGlobalOpts(cmd);
+        const env = resolveEnvironment(config, globalOpts.env);
+        clearProfileAuth(env, Boolean(opts.all));
+
+        if (opts.all) {
+          output.success(`Logged out of ${env} (OAuth, API key, and salt removed).`);
+        } else {
+          output.success(`Logged out of ${env} (OAuth tokens removed).`);
+        }
       } catch (err) {
         handleError(err);
       }
@@ -82,34 +78,50 @@ export function registerWhoami(program: Command): void {
     .description('Show current account info and environment')
     .action(async (_, cmd) => {
       try {
-        const globalOpts = cmd.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const globalOpts = getGlobalOpts(cmd);
+        const config = readConfig();
+        const env = resolveEnvironment(config, globalOpts.env);
+        const profile = getProfile(config, env);
+        const authMethod = getAuthMethod(profile);
+
+        if (!authMethod && !globalOpts.apiKey) {
+          output.error(`Not authenticated for ${env}. ${AUTH_HINT}`);
+          process.exit(1);
+        }
 
         const spinner = createSpinner('Fetching account info...');
         spinner.start();
 
-        const info = await client.get<{
-          id?: string;
-          business_name?: string;
-          email?: string;
-          country?: string;
-        }>('/v1/basicinfo').catch(() => null);
+        const client = await createClientFromCmd(cmd);
 
-        // Fallback: verify connection works
+        const infoPath = client.authMethod === 'oauth' ? '/v1/info' : '/v1/account-status';
+        const info = await client
+          .get<{
+            id?: string;
+            name?: string;
+            display_name?: string;
+            business_name?: string;
+            email?: string;
+            country?: string;
+          }>(infoPath)
+          .catch(() => null);
+
         const verified = info ? true : await client.verifyConnection();
 
         spinner.stop();
 
         if (!verified) {
-          output.error('Unable to connect. Run `hitpay login` to re-authenticate.');
+          output.error('Unable to connect. Re-authenticate for this environment.');
           process.exit(1);
         }
 
-        const config = readConfig();
         output.printData({
-          environment: config.environment || 'sandbox',
+          environment: env,
+          active_environment: getActiveEnvironment(config),
+          auth_method: client.authMethod,
+          api_url: getResolvedApiUrl(globalOpts.env),
           ...(info || {}),
-          config_path: '~/.hitpay/config.json',
+          config_path: getConfigPath(),
         });
       } catch (err) {
         handleError(err);

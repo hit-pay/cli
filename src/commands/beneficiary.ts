@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import type { BeneficiaryResponse, CursorPaginatedResponse } from '../lib/hitpay/types.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -24,8 +24,7 @@ export function registerBeneficiary(program: Command): void {
     .option('--email <email>', 'Beneficiary email')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Creating beneficiary...');
         spinner.start();
@@ -71,8 +70,7 @@ export function registerBeneficiary(program: Command): void {
     .option('--limit <n>', 'Number of results', '25')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching beneficiaries...');
         spinner.start();
@@ -110,8 +108,7 @@ export function registerBeneficiary(program: Command): void {
     .description('Delete a beneficiary')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Deleting beneficiary...');
         spinner.start();

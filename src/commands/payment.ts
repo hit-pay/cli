@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { PaymentRequestResponse, PagePaginatedResponse } from '../lib/hitpay/types.js';
 import { formatCurrency, formatPaymentMethod } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -28,8 +28,7 @@ export function registerPayment(program: Command): void {
     .option('--expiry <minutes>', 'Expire after N minutes')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Creating payment request...');
         spinner.start();
@@ -80,8 +79,7 @@ export function registerPayment(program: Command): void {
     .description('Get payment request details')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching payment...');
         spinner.start();
@@ -117,8 +115,7 @@ export function registerPayment(program: Command): void {
     .option('--page <n>', 'Page number', '1')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching payments...');
         spinner.start();
@@ -164,8 +161,7 @@ export function registerPayment(program: Command): void {
     .description('Cancel/delete a pending payment request')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Canceling payment...');
         spinner.start();

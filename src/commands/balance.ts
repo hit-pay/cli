@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { BalanceResponse } from '../lib/hitpay/types.js';
 import { formatCurrency } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -12,8 +12,7 @@ export function registerBalance(program: Command): void {
     .description('Show account balances by currency')
     .action(async (_, cmd) => {
       try {
-        const globalOpts = cmd.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching balances...');
         spinner.start();

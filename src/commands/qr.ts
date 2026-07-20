@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import qrTerminal from 'qrcode-terminal';
 import { formatCurrency, formatPaymentMethod } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -39,8 +39,7 @@ export function registerQr(program: Command): void {
     .option('--reference <ref>', 'Reference number')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Generating QR code...');
         spinner.start();
