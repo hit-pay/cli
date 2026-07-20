@@ -34,12 +34,18 @@ export function registerLogin(program: Command): void {
         const config = readConfig();
         const env = getActiveEnvironment(config);
 
-        const spinner = createSpinner('Opening browser for sign-in...');
+        const spinner = createSpinner('Opening browser for sign-in...', { discardStdin: false });
         spinner.start();
 
         await loginWithOAuth({
           environment: env,
           port: Number(opts.oauthPort),
+          onWaitingForAuth: () => {
+            spinner.text = 'Waiting for authorization in browser...';
+          },
+          onCompleting: () => {
+            spinner.text = 'Completing sign-in...';
+          },
         });
 
         spinner.succeed(`Authenticated with HitPay (${env})`);
