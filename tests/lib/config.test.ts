@@ -9,6 +9,7 @@ import {
 import {
   ENVIRONMENT_NAMES,
   getApiBaseUrl,
+  getDashboardBaseUrl,
   getOAuthAuthorizeUrl,
   getOAuthTokenUrl,
   getOAuthClientId,
@@ -76,6 +77,13 @@ describe('Environments (pure)', () => {
     expect(getApiBaseUrl('staging')).toBe('https://api.staging.hit-pay.com');
     expect(getApiBaseUrl('sandbox')).toBe('https://api.sandbox.hit-pay.com');
     expect(getApiBaseUrl('production')).toBe('https://api.hit-pay.com');
+  });
+
+  it('uses hardcoded default dashboard URLs', () => {
+    expect(getDashboardBaseUrl('local')).toBe('https://dashboard.src.test');
+    expect(getDashboardBaseUrl('staging')).toBe('https://dashboard.staging.hit-pay.com');
+    expect(getDashboardBaseUrl('sandbox')).toBe('https://dashboard.sandbox.hit-pay.com');
+    expect(getDashboardBaseUrl('production')).toBe('https://dashboard.hit-pay.com');
   });
 
   it('builds OAuth URLs from environment definitions', () => {

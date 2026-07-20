@@ -3,6 +3,7 @@ import { URL } from 'node:url';
 import {
   type Environment,
   ENVIRONMENT_NAMES,
+  getDashboardBaseUrl,
   getOAuthAuthorizeUrl,
   getOAuthClientId,
   hasOAuthClientId,
@@ -17,13 +18,21 @@ import { generateOAuthState, generatePkce } from './pkce.js';
 
 const DEFAULT_OAUTH_PORT = 8085;
 const OAUTH_CALLBACK_PATH = '/callback';
+const OAUTH_SUCCESS_REDIRECT_SECONDS = 3;
 
-function oauthSuccessPageHtml(): string {
+function escapeHtmlAttribute(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+}
+
+function oauthSuccessPageHtml(dashboardUrl: string): string {
+  const safeDashboardUrl = escapeHtmlAttribute(dashboardUrl);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="${OAUTH_SUCCESS_REDIRECT_SECONDS};url=${safeDashboardUrl}">
   <title>HitPay CLI — Signed in</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -114,6 +123,16 @@ function oauthSuccessPageHtml(): string {
       font-weight: 600;
       color: #1d4ed8;
     }
+    .link {
+      display: inline-block;
+      margin-top: 16px;
+      color: #2563eb;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .link:hover {
+      text-decoration: underline;
+    }
     @keyframes pop {
       from { transform: scale(0.85); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
@@ -132,24 +151,24 @@ function oauthSuccessPageHtml(): string {
       </svg>
     </div>
     <h1>You're signed in</h1>
-    <p>Authentication completed successfully. You can close this tab and return to your terminal.</p>
+    <p>Authentication completed successfully. Return to your terminal to continue using the CLI.</p>
     <p class="hint">
-      This tab will close automatically in
-      <span class="countdown" id="countdown">10</span>s.
-      <br>
-      If it stays open, close it manually — your CLI is already authenticated.
+      Redirecting to your HitPay dashboard in
+      <span class="countdown" id="countdown">${OAUTH_SUCCESS_REDIRECT_SECONDS}</span>s.
     </p>
+    <a class="link" href="${safeDashboardUrl}">Continue to dashboard now</a>
   </main>
   <script>
     (function () {
-      var seconds = 10;
+      var seconds = ${OAUTH_SUCCESS_REDIRECT_SECONDS};
+      var dashboardUrl = ${JSON.stringify(dashboardUrl)};
       var countdown = document.getElementById('countdown');
       var timer = setInterval(function () {
         seconds -= 1;
         if (countdown) countdown.textContent = String(seconds);
         if (seconds <= 0) {
           clearInterval(timer);
-          window.close();
+          window.location.href = dashboardUrl;
         }
       }, 1000);
     })();
@@ -210,7 +229,11 @@ function buildAuthorizeUrl(
   return url.toString();
 }
 
-function waitForCallback(port: number, expectedState: string): Promise<{ code: string }> {
+function waitForCallback(
+  port: number,
+  expectedState: string,
+  dashboardUrl: string,
+): Promise<{ code: string }> {
   return new Promise((resolve, reject) => {
     let server: Server | undefined;
     let settled = false;
@@ -273,7 +296,7 @@ function waitForCallback(port: number, expectedState: string): Promise<{ code: s
           return;
         }
 
-        endResponse(res, 200, oauthSuccessPageHtml(), 'text/html; charset=utf-8');
+        endResponse(res, 200, oauthSuccessPageHtml(dashboardUrl), 'text/html; charset=utf-8');
         finish(() => {
           resolve({ code });
         });
@@ -308,7 +331,8 @@ export async function loginWithOAuth(options: OAuthLoginOptions): Promise<OAuthL
   }
 
   const authorizeUrl = buildAuthorizeUrl(env, redirectUri, state, challenge, clientId);
-  const callbackPromise = waitForCallback(port, state);
+  const dashboardUrl = getDashboardBaseUrl(env);
+  const callbackPromise = waitForCallback(port, state, dashboardUrl);
 
   await openBrowser(authorizeUrl);
   options.onWaitingForAuth?.();

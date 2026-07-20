@@ -77,6 +77,10 @@ export function getApiBaseUrl(env: Environment): string {
   return ENVIRONMENTS[env].apiBaseUrl;
 }
 
+export function getDashboardBaseUrl(env: Environment): string {
+  return ENVIRONMENTS[env].dashboardBaseUrl;
+}
+
 export function getOAuthAuthorizeUrl(env: Environment): string {
   const { dashboardBaseUrl, oauthAuthorizePath } = ENVIRONMENTS[env];
   return `${dashboardBaseUrl}${oauthAuthorizePath}`;
