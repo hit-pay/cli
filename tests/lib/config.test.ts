@@ -1,57 +1,137 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { readFileSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { describe, it, expect } from 'vitest';
+import {
+  migrateConfigForTest,
+  getAuthMethod,
+  getProfile,
+  maskSecret,
+  resolveEnvironment,
+} from '../../src/lib/config.js';
+import {
+  ENVIRONMENT_NAMES,
+  getApiBaseUrl,
+  getDashboardBaseUrl,
+  getOAuthAuthorizeUrl,
+  getOAuthTokenUrl,
+  getOAuthClientId,
+  hasOAuthClientId,
+  isEnvironment,
+  OAUTH_LOGIN_SCOPE,
+} from '../../src/lib/hitpay/environments.js';
 
-// We need to mock the config path before importing
-const TEST_DIR = join(tmpdir(), `hitpay-cli-test-${Date.now()}`);
-const TEST_CONFIG = join(TEST_DIR, 'config.json');
+describe('Config migration (pure)', () => {
+  it('migrates flat api_key into profiles for active environment', () => {
+    const migrated = migrateConfigForTest({
+      environment: 'sandbox',
+      api_key: 'sk-test-123',
+      salt: 'salt-abc',
+    });
 
-vi.mock('node:os', async () => {
-  const actual = await vi.importActual('node:os');
-  return {
-    ...actual,
-    homedir: () => tmpdir() + `/hitpay-cli-test-home-${Date.now()}`,
-  };
+    expect(migrated.profiles?.sandbox?.api_key).toBe('sk-test-123');
+    expect(migrated.profiles?.sandbox?.salt).toBe('salt-abc');
+  });
+
+  it('leaves profile-based config unchanged', () => {
+    const input = {
+      environment: 'production' as const,
+      profiles: {
+        production: { api_key: 'sk-live' },
+        sandbox: {
+          oauth: {
+            access_token: 't',
+            refresh_token: 'r',
+            expires_at: 999,
+            token_type: 'Bearer' as const,
+          },
+        },
+      },
+    };
+    expect(migrateConfigForTest(input)).toEqual(input);
+  });
+
+  it('resolves auth method with api_key priority', () => {
+    expect(
+      getAuthMethod({
+        api_key: 'sk-xxx',
+        oauth: { access_token: 't', refresh_token: 'r', expires_at: 999, token_type: 'Bearer' },
+      }),
+    ).toBe('api_key');
+    expect(
+      getAuthMethod({
+        oauth: { access_token: 't', refresh_token: 'r', expires_at: 999, token_type: 'Bearer' },
+      }),
+    ).toBe('oauth');
+    expect(getAuthMethod({})).toBeNull();
+  });
 });
 
-// Import after mock setup — but since the config module uses homedir at module level,
-// we'll test the core logic directly
-describe('Config module', () => {
-  beforeEach(() => {
-    mkdirSync(TEST_DIR, { recursive: true });
+describe('Environments (pure)', () => {
+  it('recognizes all planned environments', () => {
+    for (const env of ENVIRONMENT_NAMES) {
+      expect(isEnvironment(env)).toBe(true);
+    }
+    expect(isEnvironment('invalid')).toBe(false);
   });
 
-  afterEach(() => {
-    rmSync(TEST_DIR, { recursive: true, force: true });
+  it('uses hardcoded default API URLs', () => {
+    expect(getApiBaseUrl('local')).toBe('https://api.src.test');
+    expect(getApiBaseUrl('staging')).toBe('https://api.staging.hit-pay.com');
+    expect(getApiBaseUrl('sandbox')).toBe('https://api.sandbox.hit-pay.com');
+    expect(getApiBaseUrl('production')).toBe('https://api.hit-pay.com');
   });
 
-  it('reads empty config when file does not exist', () => {
-    const nonExistent = join(TEST_DIR, 'nope.json');
-    expect(existsSync(nonExistent)).toBe(false);
+  it('uses hardcoded default dashboard URLs', () => {
+    expect(getDashboardBaseUrl('local')).toBe('https://dashboard.src.test');
+    expect(getDashboardBaseUrl('staging')).toBe('https://dashboard.staging.hit-pay.com');
+    expect(getDashboardBaseUrl('sandbox')).toBe('https://dashboard.sandbox.hit-pay.com');
+    expect(getDashboardBaseUrl('production')).toBe('https://dashboard.hit-pay.com');
   });
 
-  it('writes and reads config as JSON', () => {
-    const config = { api_key: 'sk-test-123', environment: 'sandbox' as const };
-    writeFileSync(TEST_CONFIG, JSON.stringify(config, null, 2));
-
-    const raw = readFileSync(TEST_CONFIG, 'utf-8');
-    const parsed = JSON.parse(raw);
-    expect(parsed.api_key).toBe('sk-test-123');
-    expect(parsed.environment).toBe('sandbox');
+  it('builds OAuth URLs from environment definitions', () => {
+    expect(getOAuthAuthorizeUrl('sandbox')).toBe(
+      'https://dashboard.sandbox.hit-pay.com/oauth/authorize',
+    );
+    expect(getOAuthTokenUrl('staging')).toBe(
+      'https://api.staging.hit-pay.com/v1/open/oauth/token',
+    );
+    expect(getOAuthTokenUrl('local')).toBe('https://api.src.test/v1/open/oauth/token');
   });
 
-  it('config file can store all valid keys', () => {
-    const config = {
-      api_key: 'sk-test-456',
-      salt: 'salt-123',
-      environment: 'production' as const,
-      currency: 'SGD',
-      country: 'SG',
-    };
-    writeFileSync(TEST_CONFIG, JSON.stringify(config));
-    const raw = readFileSync(TEST_CONFIG, 'utf-8');
-    const parsed = JSON.parse(raw);
-    expect(parsed).toEqual(config);
+  it('includes hardcoded oauth client ids for every environment', () => {
+    for (const env of ENVIRONMENT_NAMES) {
+      expect(getOAuthClientId(env)).toBeTruthy();
+      expect(hasOAuthClientId(env)).toBe(true);
+    }
+    expect(getOAuthClientId('sandbox')).toBe('hitpay-cli-sandbox');
+    expect(getOAuthClientId('production')).toBe('hitpay-cli-production');
+  });
+
+  it('requests business and payment scopes during oauth login', () => {
+    expect(OAUTH_LOGIN_SCOPE).toContain('business:read');
+    expect(OAUTH_LOGIN_SCOPE).toContain('payments:create');
+    expect(OAUTH_LOGIN_SCOPE).toContain('payments:read');
+  });
+});
+
+describe('Profile lookup (pure)', () => {
+  it('returns empty profile when env not configured', () => {
+    expect(getProfile({ environment: 'sandbox' }, 'sandbox')).toEqual({});
+  });
+});
+
+describe('resolveEnvironment (pure)', () => {
+  it('defaults to production and accepts overrides', () => {
+    expect(resolveEnvironment({})).toBe('production');
+    expect(resolveEnvironment({ environment: 'production' }, 'staging')).toBe('staging');
+  });
+
+  it('rejects invalid environment names', () => {
+    expect(() => resolveEnvironment({}, 'not-real')).toThrow(/Invalid environment/);
+  });
+});
+
+describe('maskSecret (pure)', () => {
+  it('masks long secrets', () => {
+    expect(maskSecret('abcdefghijklmnop')).toBe('abcdefgh...mnop');
+    expect(maskSecret('tiny')).toBe('****');
   });
 });

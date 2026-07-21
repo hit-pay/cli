@@ -4,53 +4,139 @@ Manage payments, test webhooks, and generate QR codes from the terminal. The off
 
 ## Installation
 
+### From npm (recommended)
+
+Requires Node.js 18+.
+
 ```bash
-npm install -g @hit-pay/cli
+npm install -g @hitpay/cli
 ```
 
-Or run directly:
+Verify:
 
 ```bash
-npx @hit-pay/cli --help
+hitpay --version
+```
+
+Or run without installing globally:
+
+```bash
+npx @hitpay/cli --help
+```
+### Update
+
+```bash
+hitpay upgrade
+```
+
+Or manually:
+
+```bash
+npm install -g @hitpay/cli@latest
 ```
 
 ## Quick Start
 
 ```bash
-# 1. Authenticate with your API key
+# 1. Switch to sandbox (default active environment is production)
+hitpay env use sandbox
+
+# 2. Sign in via browser (OAuth)
 hitpay login
 
-# 2. Check your balance
-hitpay balance
+# Or set an API key instead (takes priority over OAuth)
+hitpay config set api_key sk-sandbox-xxx
 
-# 3. Create a payment
+# 3. Check your account
+hitpay whoami
+
+# 4. Create a payment
 hitpay payment create --amount 100 --currency SGD --email buyer@example.com
 
-# 4. Generate a QR code in your terminal
+# 5. Generate a QR code in your terminal
 hitpay qr create --amount 10 --currency SGD --method paynow_online
 
-# 5. Listen for webhooks locally
+# 6. Listen for webhooks locally
 hitpay listen --forward-to http://localhost:3000/webhook
 ```
 
-## Commands
+## Authentication & configuration
 
-### Authentication
+Settings are stored in `~/.hitpay/config.json` (file mode `0600`). Each environment has its own profile (credentials, OAuth tokens, optional API URL override).
+
+### Environment
 
 ```bash
-hitpay login                              # Interactive API key setup
-hitpay login --api-key sk-live-xxx        # Non-interactive
-hitpay logout                             # Clear stored credentials
-hitpay whoami                             # Show account info + environment
+hitpay env                              # Show active environment
+hitpay env use sandbox                  # Switch default environment
+hitpay env use production               # Switch back to production
 ```
 
-### Configuration
+Supported environments: `local`, `staging`, `sandbox`, `production`.
+
+**Default active environment:** `production` (when unset in config).
+
+### Sign in
 
 ```bash
-hitpay config set environment production  # Switch sandbox <> production
-hitpay config set currency SGD            # Set default currency
-hitpay config get environment
+hitpay login                            # OAuth via browser (active environment)
+hitpay login --oauth-port 8085          # Custom callback port
+```
+
+`hitpay login` uses the **active environment**. Switch first with `hitpay env use <env>` — do not pass `--env` to login.
+
+### API key (alternative to OAuth)
+
+```bash
+hitpay config set api_key sk-xxx        # Verify + save to active profile
+hitpay config unset api_key             # Remove from active profile
+```
+
+When both API key and OAuth exist for a profile, **API key is used first**.
+
+### Other config
+
+```bash
+hitpay config set currency SGD
+hitpay config set country SG
+hitpay config set salt <webhook-salt>
+hitpay config get api_key
 hitpay config list
+hitpay config list --all                # All environment profiles
+hitpay logout                           # Clear OAuth tokens
+hitpay logout --all                     # Clear OAuth + API key + salt
+hitpay whoami                           # Account info + auth method
+```
+
+Use `hitpay env use <env>` to switch environments — not `config set environment`.
+
+## Global options
+
+| Flag | Description |
+|------|-------------|
+| `--env <environment>` | One-off environment override for this command only |
+| `--api-key <key>` | One-off API key override (not saved) |
+| `--json` | Output results as JSON |
+| `--help` | Show help |
+| `--version` | Show CLI version |
+
+Examples:
+
+```bash
+hitpay balance --env sandbox             # Check sandbox without changing default
+hitpay whoami --env production --json
+hitpay balance --api-key "$CI_KEY" --env sandbox
+```
+
+Credentials are **not** read from `HITPAY_*` environment variables — use config commands or flags above.
+
+## Commands
+
+### Account
+
+```bash
+hitpay balance
+hitpay account
 ```
 
 ### Payments
@@ -67,17 +153,15 @@ hitpay payment cancel <payment-id>
 
 ```bash
 hitpay charge list --status succeeded --date-from 2026-03-01 --limit 20
-hitpay charge list --payment-method paynow_online --amount-from 100
-hitpay charge get <charge-id>             # Includes fee breakdown
+hitpay charge get <charge-id>
 hitpay charge export --date-from 2026-03-01 --date-to 2026-03-31
 ```
 
 ### Refunds
 
 ```bash
-hitpay refund --payment-id <charge-id> --amount 50.00    # Partial refund
-hitpay refund --payment-id <charge-id>                   # Full refund
-hitpay refund --payment-id <charge-id> --yes             # Skip confirmation
+hitpay refund --payment-id <charge-id> --amount 50.00
+hitpay refund --payment-id <charge-id> --yes
 ```
 
 ### Customers
@@ -86,8 +170,6 @@ hitpay refund --payment-id <charge-id> --yes             # Skip confirmation
 hitpay customer create --name "John Doe" --email john@example.com
 hitpay customer list --search "john"
 hitpay customer get <customer-id>
-hitpay customer update <customer-id> --email new@example.com
-hitpay customer delete <customer-id>
 ```
 
 ### Invoices
@@ -95,7 +177,6 @@ hitpay customer delete <customer-id>
 ```bash
 hitpay invoice create --amount 500 --currency SGD --customer-email john@example.com
 hitpay invoice list --status pending
-hitpay invoice delete <invoice-id>
 ```
 
 ### Subscription Plans
@@ -103,8 +184,6 @@ hitpay invoice delete <invoice-id>
 ```bash
 hitpay plan create --name "Pro Monthly" --amount 49.99 --currency SGD --cycle monthly
 hitpay plan list
-hitpay plan get <plan-id>
-hitpay plan delete <plan-id>
 ```
 
 ### Recurring Billing
@@ -112,24 +191,14 @@ hitpay plan delete <plan-id>
 ```bash
 hitpay subscription create --plan-id <id> --customer-email user@example.com
 hitpay subscription list --status active
-hitpay subscription get <subscription-id>
-hitpay subscription cancel <subscription-id>
 ```
 
 ### Payouts
 
 ```bash
-# Beneficiaries
 hitpay beneficiary create --country SG --currency SGD --holder-name "John" \
   --account 1234567890 --bank-swift DBSSSGSG
-hitpay beneficiary list
-hitpay beneficiary delete <id>
-
-# Transfers
-hitpay transfer estimate --beneficiary-id <id> --amount 1000 --currency SGD
 hitpay transfer create --beneficiary-id <id> --amount 1000 --currency SGD
-hitpay transfer list --status paid
-hitpay transfer get <transfer-id>
 ```
 
 ### QR Codes
@@ -138,67 +207,39 @@ hitpay transfer get <transfer-id>
 hitpay qr create --amount 10 --currency SGD --method paynow_online
 ```
 
-Renders the QR code directly in your terminal.
-
 ### Payment Methods
 
 ```bash
-hitpay methods --country SG               # PayNow, GrabPay, ShopeePay, cards
-hitpay methods --country MY               # FPX, GrabPay, Touch 'n Go, DuitNow
-hitpay methods --country PH               # GCash, QRPH, ShopeePay
-hitpay methods --live                     # Show methods enabled on your account
+hitpay methods --country SG
+hitpay methods --live
 ```
-
-Supported countries: SG, MY, PH, TH, ID, VN, IN, AU.
 
 ### Webhook Testing
 
 ```bash
-# Forward webhooks to your local dev server
 hitpay listen --forward-to http://localhost:3000/webhook
-hitpay listen --forward-to http://localhost:3000/webhook --events charge.created
-
-# Simulate webhook events
 hitpay trigger payment_request.completed
-hitpay trigger charge.created --url http://localhost:3000/webhook
-hitpay trigger --list                     # Show all 18 event types
+hitpay trigger --list
 ```
 
-The `listen` command creates a tunnel via [localtunnel](https://github.com/localtunnel/localtunnel), registers it as a webhook endpoint with HitPay, and forwards received events to your local server. Press Ctrl+C to clean up.
+Run `hitpay help` for a grouped overview of all commands.
 
-## Global Options
+## Configuration reference
 
-| Flag | Description |
-|------|-------------|
-| `--json` | Output results as JSON (for scripting) |
-| `--env <environment>` | Override environment (`sandbox` or `production`) |
-| `--help` | Show help for any command |
-| `--version` | Show CLI version |
-
-## Configuration
-
-Credentials are stored in `~/.hitpay/config.json` with `0600` file permissions.
-
-| Key | Description | Default |
-|-----|-------------|---------|
-| `api_key` | HitPay API key | — |
-| `salt` | Webhook signature salt | — |
-| `environment` | `sandbox` or `production` | `sandbox` |
-| `currency` | Default currency code | — |
-| `country` | Default country code | — |
-
-Environment variables:
-
-```bash
-export HITPAY_API_KEY=your-api-key
-export HITPAY_ENVIRONMENT=sandbox
-```
+| Key | Scope | Description |
+|-----|-------|-------------|
+| `environment` | Global | Active environment (`hitpay env use`) |
+| `currency` | Global | Default currency code |
+| `country` | Global | Default country code |
+| `api_key` | Per env | API key (via `config set api_key`) |
+| `salt` | Per env | Webhook signature salt |
+| `oauth` | Per env | OAuth tokens (via `hitpay login`) |
 
 ## HitPay Developer Ecosystem
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| **CLI** (this) | Terminal-native developer workflows | `npm i -g @hit-pay/cli` |
+| **CLI** (this) | Terminal-native developer workflows | `npm i -g @hitpay/cli` |
 | [Claude Code Plugin](https://docs.hitpayapp.com/apis/guide/claude-code-plugin) | AI-powered integration in Claude Code | `claude plugin add hit-pay/claude-code-plugin` |
 | [Agent Skills](https://docs.hitpayapp.com/apis/guide/ai-skills) | Code generation for Cursor, Copilot, Windsurf | `npx skills add hit-pay/agent-skills` |
 | [MCP Server](https://www.npmjs.com/package/hitpay-mcp) | 39 MCP tools for AI agents | `npx hitpay-mcp` |
@@ -209,9 +250,9 @@ export HITPAY_ENVIRONMENT=sandbox
 git clone https://github.com/hit-pay/cli.git
 cd cli
 npm install
-npm run dev -- --help          # Run from source
-npm run build                  # Build with tsup
-npm test                       # Run tests
+npm run dev -- --help
+npm run build
+npm test
 ```
 
 ## Requirements
@@ -221,4 +262,4 @@ npm test                       # Run tests
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

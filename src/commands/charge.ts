@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { ChargeResponse, CursorPaginatedResponse } from '../lib/hitpay/types.js';
 import { formatCurrency, formatPaymentMethod, redactCard } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -25,8 +25,7 @@ export function registerCharge(program: Command): void {
     .option('--customer-id <id>', 'Filter by customer ID')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching charges...');
         spinner.start();
@@ -72,8 +71,7 @@ export function registerCharge(program: Command): void {
     .description('Get charge details with fee breakdown')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching charge...');
         spinner.start();
@@ -121,8 +119,7 @@ export function registerCharge(program: Command): void {
     .option('--limit <n>', 'Number of results', '25')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Exporting charges...');
         spinner.start();

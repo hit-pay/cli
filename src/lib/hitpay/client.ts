@@ -1,24 +1,34 @@
 // Vendored from hitpay-mcp (currently unpublished) — only the surface the CLI uses.
 // ponytail: generic REST client + the HitPayApiError contract pinned by tests/lib/errors.test.ts.
 
-export type Environment = 'sandbox' | 'production';
+import {
+  type Environment,
+  getApiBaseUrl,
+} from './environments.js';
+import { environmentFetch } from '../http-fetch.js';
 
-const BASE_URLS: Record<Environment, string> = {
-  sandbox: 'https://api.sandbox.hit-pay.com',
-  production: 'https://api.hit-pay.com',
-};
+export type { Environment, EnvironmentProfile, OAuthCredentials } from './environments.js';
+
+export type AuthMethod = 'api_key' | 'oauth';
+
+export interface HitPayClientOptions {
+  environment: Environment;
+  auth: { method: 'api_key'; apiKey: string } | { method: 'oauth'; accessToken: string };
+}
 
 interface HitPayErrorBody {
   message?: string;
   errors?: Record<string, string[]>;
 }
 
-function suggest(statusCode: number, path: string): string {
+function suggest(statusCode: number, path: string, authMethod: AuthMethod): string {
   switch (statusCode) {
     case 400:
       return `Bad request to ${path} — check the parameters.`;
     case 401:
-      return 'Authentication failed — check your API key and environment (run `hitpay login`).';
+      return authMethod === 'oauth'
+        ? 'Authentication failed — run `hitpay login` to re-authenticate.'
+        : 'Authentication failed — check your API key and environment (run `hitpay config set api_key`).';
     case 403:
       return `Not permitted to access ${path}.`;
     case 404:
@@ -44,26 +54,42 @@ export class HitPayApiError extends Error {
   readonly details?: Record<string, string[]>;
   readonly path: string;
 
-  constructor(statusCode: number, body: HitPayErrorBody, path: string) {
+  constructor(statusCode: number, body: HitPayErrorBody, path: string, authMethod: AuthMethod = 'api_key') {
     super(body.message ?? `Request to ${path} failed (${statusCode})`);
     this.name = 'HitPayApiError';
     this.statusCode = statusCode;
     this.errorCode = `HITPAY_${statusCode}`;
     this.path = path;
     this.details = body.errors;
-    this.suggestion = suggest(statusCode, path);
+    this.suggestion = suggest(statusCode, path, authMethod);
   }
 }
 
 export class HitPayClient {
-  private readonly apiKey: string;
   private readonly baseURL: string;
+  private readonly auth: HitPayClientOptions['auth'];
   readonly environment: Environment;
+  readonly authMethod: AuthMethod;
 
-  constructor(apiKey: string, environment: Environment = 'sandbox') {
-    this.apiKey = apiKey;
-    this.environment = environment;
-    this.baseURL = BASE_URLS[environment] ?? BASE_URLS.sandbox;
+  constructor(options: HitPayClientOptions) {
+    this.environment = options.environment;
+    this.baseURL = getApiBaseUrl(options.environment);
+    this.auth = options.auth;
+    this.authMethod = options.auth.method;
+  }
+
+  /** @deprecated Use HitPayClientOptions constructor. Kept for config verify during set api_key. */
+  static withApiKey(apiKey: string, environment: Environment): HitPayClient {
+    return new HitPayClient({
+      environment,
+      auth: { method: 'api_key', apiKey },
+    });
+  }
+
+  updateOAuthAccessToken(accessToken: string): void {
+    if (this.auth.method === 'oauth') {
+      this.auth.accessToken = accessToken;
+    }
   }
 
   get<T>(path: string, query?: Record<string, unknown>): Promise<T> {
@@ -82,14 +108,34 @@ export class HitPayClient {
     return this.request<void>('DELETE', path);
   }
 
-  /** Lightweight auth/ reachability check. */
+  /** Lightweight auth / reachability check. */
   async verifyConnection(): Promise<boolean> {
+    const path = this.auth.method === 'oauth' ? '/v1/info' : '/v1/account-status';
     try {
-      await this.get('/v1/account-status');
+      await this.get(path);
       return true;
     } catch {
       return false;
     }
+  }
+
+  private authHeaders(hasBody: boolean): Record<string, string> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+
+    if (this.auth.method === 'api_key') {
+      headers['X-BUSINESS-API-KEY'] = this.auth.apiKey;
+    } else {
+      headers.Authorization = `Bearer ${this.auth.accessToken}`;
+    }
+
+    if (hasBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    return headers;
   }
 
   private async request<T>(
@@ -108,13 +154,9 @@ export class HitPayClient {
     }
 
     const hasBody = body !== undefined;
-    const res = await fetch(url, {
+    const res = await environmentFetch(this.environment, url, {
       method,
-      headers: {
-        'X-BUSINESS-API-KEY': this.apiKey,
-        Accept: 'application/json',
-        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-      },
+      headers: this.authHeaders(hasBody),
       body: hasBody ? JSON.stringify(body) : undefined,
     });
 
@@ -125,7 +167,7 @@ export class HitPayClient {
       } catch {
         // non-JSON error body; proceed with what we have
       }
-      throw new HitPayApiError(res.status, errorBody, path);
+      throw new HitPayApiError(res.status, errorBody, path, this.authMethod);
     }
 
     if (res.status === 204) return undefined as T;

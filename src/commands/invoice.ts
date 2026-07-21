@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { InvoiceResponse, CursorPaginatedResponse } from '../lib/hitpay/types.js';
 import { formatCurrency } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -26,8 +26,7 @@ export function registerInvoice(program: Command): void {
     .option('--send-email', 'Send invoice via email')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Creating invoice...');
         spinner.start();
@@ -76,8 +75,7 @@ export function registerInvoice(program: Command): void {
     .option('--status <status>', 'Filter by status')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching invoices...');
         spinner.start();
@@ -116,8 +114,7 @@ export function registerInvoice(program: Command): void {
     .description('Delete an invoice')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Deleting invoice...');
         spinner.start();

@@ -1,6 +1,6 @@
 {
-  "name": "@hit-pay/cli",
-  "version": "0.1.0",
+  "name": "@hitpay/cli",
+  "version": "0.1.1",
   "description": "HitPay CLI — manage payments, test webhooks, and generate QR codes from the terminal",
   "type": "module",
   "bin": {
@@ -9,9 +9,17 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsup",
+    "prepublishOnly": "npm run build && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "version:patch": "node scripts/release.mjs bump patch",
+    "version:minor": "node scripts/release.mjs bump minor",
+    "version:major": "node scripts/release.mjs bump major",
+    "publish:npm": "node scripts/release.mjs publish",
+    "release:patch": "node scripts/release.mjs release patch",
+    "release:minor": "node scripts/release.mjs release minor",
+    "release:major": "node scripts/release.mjs release major"
   },
   "keywords": [
     "hitpay",
@@ -21,10 +29,27 @@
     "grabpay",
     "qr",
     "webhooks",
+    "oauth",
     "southeast-asia"
   ],
   "author": "HitPay",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hit-pay/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hit-pay/cli/issues"
+  },
+  "homepage": "https://github.com/hit-pay/cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },

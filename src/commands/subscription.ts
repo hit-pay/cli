@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { RecurringBillingResponse, PagePaginatedResponse } from '../lib/hitpay/types.js';
 import { formatCurrency } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -21,8 +21,7 @@ export function registerSubscription(program: Command): void {
     .option('--send-email', 'Send notification email')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Creating subscription...');
         spinner.start();
@@ -66,8 +65,7 @@ export function registerSubscription(program: Command): void {
     .option('--limit <n>', 'Number of results', '25')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching subscriptions...');
         spinner.start();
@@ -113,8 +111,7 @@ export function registerSubscription(program: Command): void {
     .description('Get subscription details')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching subscription...');
         spinner.start();
@@ -150,8 +147,7 @@ export function registerSubscription(program: Command): void {
     .description('Cancel a subscription')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Canceling subscription...');
         spinner.start();

@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { confirm } from '@inquirer/prompts';
 import type { ChargeResponse, RefundResponse } from '../lib/hitpay/types.js';
 import { formatCurrency } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -17,8 +17,7 @@ export function registerRefund(program: Command): void {
     .option('--yes', 'Skip confirmation prompt')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         // Fetch charge details first to show what we're refunding
         const spinner = createSpinner('Fetching charge details...');

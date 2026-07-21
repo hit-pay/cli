@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import type { CustomerResponse, CursorPaginatedResponse } from '../lib/hitpay/types.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -23,8 +23,7 @@ export function registerCustomer(program: Command): void {
     .option('--country <country>', 'Country code')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Creating customer...');
         spinner.start();
@@ -69,8 +68,7 @@ export function registerCustomer(program: Command): void {
     .option('--limit <n>', 'Number of results', '25')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching customers...');
         spinner.start();
@@ -108,8 +106,7 @@ export function registerCustomer(program: Command): void {
     .description('Get customer details')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching customer...');
         spinner.start();
@@ -150,8 +147,7 @@ export function registerCustomer(program: Command): void {
     .option('--country <country>', 'Country code')
     .action(async (id: string, opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Updating customer...');
         spinner.start();
@@ -182,8 +178,7 @@ export function registerCustomer(program: Command): void {
     .description('Delete a customer')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Deleting customer...');
         spinner.start();
