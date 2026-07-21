@@ -1,4 +1,4 @@
-import ora, { type Ora, type Options as OraOptions } from 'ora';
+import ora, { type Ora } from 'ora';
 import { isJsonMode } from './output.js';
 
 export interface CliSpinner {
@@ -86,9 +86,10 @@ export function createSpinner(text: string, options: CreateSpinnerOptions = {}):
     };
     return noop;
   }
-  const oraOptions: OraOptions = { text };
-  if (options.discardStdin !== undefined) {
-    oraOptions.discardStdin = options.discardStdin;
-  }
-  return attachStdinCleanup(ora(oraOptions));
+  return attachStdinCleanup(
+    ora({
+      text,
+      ...(options.discardStdin !== undefined ? { discardStdin: options.discardStdin } : {}),
+    }),
+  );
 }

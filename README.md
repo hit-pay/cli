@@ -4,14 +4,35 @@ Manage payments, test webhooks, and generate QR codes from the terminal. The off
 
 ## Installation
 
+### From npm (recommended)
+
+Requires Node.js 18+.
+
 ```bash
 npm install -g @hitpay/cli
 ```
 
-Or run directly:
+Verify:
+
+```bash
+hitpay --version
+```
+
+Or run without installing globally:
 
 ```bash
 npx @hitpay/cli --help
+```
+### Update
+
+```bash
+hitpay upgrade
+```
+
+Or manually:
+
+```bash
+npm install -g @hitpay/cli@latest
 ```
 
 ## Quick Start

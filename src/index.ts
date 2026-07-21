@@ -1,10 +1,10 @@
-import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { PUBLIC_ENVIRONMENT_NAMES } from './lib/hitpay/environments.js';
 import { setJsonMode } from './lib/output.js';
 import { handleError } from './lib/errors.js';
 import { getGlobalOpts } from './lib/global-options.js';
 import { maybeNotifyUpdate } from './lib/update-notifier.js';
+import { getCurrentVersion } from './lib/cli-version.js';
 import { registerLogin, registerLogout, registerWhoami } from './commands/login.js';
 import { registerEnv } from './commands/env.js';
 import { registerConfig } from './commands/config.js';
@@ -27,15 +27,12 @@ import { registerHelp } from './commands/help.js';
 import { registerVersion } from './commands/version.js';
 import { registerUpgrade } from './commands/upgrade.js';
 
-const require = createRequire(import.meta.url);
-const { version } = require('../package.json') as { version: string };
-
 const program = new Command();
 
 program
   .name('hitpay')
   .description('HitPay CLI — manage payments, test webhooks, and generate QR codes')
-  .version(version)
+  .version(getCurrentVersion())
   .option('--json', 'Output results as JSON')
   .option(
     '--env <environment>',

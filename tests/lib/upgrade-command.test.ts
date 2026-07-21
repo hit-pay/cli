@@ -5,6 +5,8 @@ import * as cliVersion from '../../src/lib/cli-version.js';
 import { CLI_PACKAGE_NAME } from '../../src/lib/package-meta.js';
 import * as output from '../../src/lib/output.js';
 
+const CURRENT_VERSION = cliVersion.getCurrentVersion();
+
 function createUpgradeProgram(): Command {
   const program = new Command();
   program.option('--json', 'Output results as JSON');
@@ -40,17 +42,21 @@ describe('hitpay upgrade command', () => {
 
     expect(fetchSpy).toHaveBeenCalled();
     expect(installSpy).toHaveBeenCalledWith('0.2.0');
-    expect(infoSpy).toHaveBeenCalledWith(`Upgrading ${CLI_PACKAGE_NAME} 0.1.0 → 0.2.0...`);
+    expect(infoSpy).toHaveBeenCalledWith(
+      `Upgrading ${CLI_PACKAGE_NAME} ${CURRENT_VERSION} → 0.2.0...`,
+    );
     expect(successSpy).toHaveBeenCalledWith(`Upgraded to ${CLI_PACKAGE_NAME}@0.2.0`);
   });
 
   it('skips install when already up to date', async () => {
-    fetchSpy.mockResolvedValue('0.1.0');
+    fetchSpy.mockResolvedValue(CURRENT_VERSION);
 
     await createUpgradeProgram().parseAsync(['node', 'hitpay', 'upgrade']);
 
     expect(installSpy).not.toHaveBeenCalled();
-    expect(successSpy).toHaveBeenCalledWith('HitPay CLI is already up to date (0.1.0)');
+    expect(successSpy).toHaveBeenCalledWith(
+      `HitPay CLI is already up to date (${CURRENT_VERSION})`,
+    );
   });
 
   it('supports check-only mode', async () => {
@@ -59,7 +65,7 @@ describe('hitpay upgrade command', () => {
     await createUpgradeProgram().parseAsync(['node', 'hitpay', 'upgrade', '--check']);
 
     expect(installSpy).not.toHaveBeenCalled();
-    expect(infoSpy).toHaveBeenCalledWith('Update available: 0.1.0 → 0.2.0');
+    expect(infoSpy).toHaveBeenCalledWith(`Update available: ${CURRENT_VERSION} → 0.2.0`);
     expect(infoSpy).toHaveBeenCalledWith('Run `hitpay upgrade` to install the latest version.');
   });
 
@@ -69,7 +75,7 @@ describe('hitpay upgrade command', () => {
     await createUpgradeProgram().parseAsync(['node', 'hitpay', 'upgrade', '--check', '--json']);
 
     expect(printDataSpy).toHaveBeenCalledWith({
-      current: '0.1.0',
+      current: CURRENT_VERSION,
       latest: '0.2.0',
       update_available: true,
     });
@@ -82,7 +88,7 @@ describe('hitpay upgrade command', () => {
 
     expect(installSpy).not.toHaveBeenCalled();
     expect(printDataSpy).toHaveBeenCalledWith({
-      current: '0.1.0',
+      current: CURRENT_VERSION,
       latest: '0.2.0',
       updated: false,
       message: 'Re-run without --json to perform the upgrade.',

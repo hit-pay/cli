@@ -1,16 +1,44 @@
-import { createRequire } from 'node:module';
+import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CLI_PACKAGE_NAME } from './package-meta.js';
 
 export { CLI_PACKAGE_NAME };
 
-const require = createRequire(import.meta.url);
-const { version: packageVersion } = require('../../package.json') as { version: string };
+function readPackageVersion(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+
+  while (true) {
+    const manifestPath = join(dir, 'package.json');
+    if (existsSync(manifestPath)) {
+      try {
+        const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+          name?: string;
+          version?: string;
+        };
+        if (manifest.name === CLI_PACKAGE_NAME && manifest.version) {
+          return manifest.version;
+        }
+      } catch {
+        // Keep searching parent directories.
+      }
+    }
+
+    const parent = dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+
+  throw new Error('Could not find package version');
+}
 
 const NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(CLI_PACKAGE_NAME)}/latest`;
 
 export function getCurrentVersion(): string {
-  return packageVersion;
+  return readPackageVersion();
 }
 
 export function compareVersions(a: string, b: string): number {

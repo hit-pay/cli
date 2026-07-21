@@ -1,22 +1,13 @@
-import { createRequire } from 'node:module';
 import { describe, it, expect } from 'vitest';
-import { CLI_PACKAGE_NAME } from '../../src/lib/package-meta.js';
 import {
   compareVersions,
   getCurrentVersion,
   isNewerVersion,
 } from '../../src/lib/cli-version.js';
 
-const require = createRequire(import.meta.url);
-const { name: packageName } = require('../../package.json') as { name: string };
-
 describe('cli-version', () => {
   it('reads current version from package.json', () => {
     expect(getCurrentVersion()).toMatch(/^\d+\.\d+\.\d+$/);
-  });
-
-  it('keeps package.json name in sync with package-meta', () => {
-    expect(packageName).toBe(CLI_PACKAGE_NAME);
   });
 
   it('compares semver versions', () => {
