@@ -28,6 +28,10 @@ const COMMAND_GROUPS: { title: string; commands: string[]; expanded?: boolean }[
     title: 'Webhooks',
     commands: ['listen', 'trigger'],
   },
+  {
+    title: 'CLI',
+    commands: ['version', 'upgrade'],
+  },
 ];
 
 const AUTH_SIMPLE_COMMANDS = ['login', 'logout', 'whoami'] as const;

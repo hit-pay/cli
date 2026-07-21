@@ -4,6 +4,7 @@ import { PUBLIC_ENVIRONMENT_NAMES } from './lib/hitpay/environments.js';
 import { setJsonMode } from './lib/output.js';
 import { handleError } from './lib/errors.js';
 import { getGlobalOpts } from './lib/global-options.js';
+import { maybeNotifyUpdate } from './lib/update-notifier.js';
 import { registerLogin, registerLogout, registerWhoami } from './commands/login.js';
 import { registerEnv } from './commands/env.js';
 import { registerConfig } from './commands/config.js';
@@ -23,6 +24,8 @@ import { registerMethods } from './commands/methods.js';
 import { registerListen } from './commands/listen.js';
 import { registerTrigger } from './commands/trigger.js';
 import { registerHelp } from './commands/help.js';
+import { registerVersion } from './commands/version.js';
+import { registerUpgrade } from './commands/upgrade.js';
 
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json') as { version: string };
@@ -39,9 +42,10 @@ program
     `One-off profile override for this command only (${PUBLIC_ENVIRONMENT_NAMES.join(', ')})`,
   )
   .option('--api-key <key>', 'API key override for this command (not saved)')
-  .hook('preAction', (_thisCommand, actionCommand) => {
+  .hook('preAction', async (_thisCommand, actionCommand) => {
     const opts = getGlobalOpts(actionCommand);
     if (opts.json) setJsonMode(true);
+    await maybeNotifyUpdate(actionCommand);
   });
 
 registerEnv(program);
@@ -65,6 +69,8 @@ registerQr(program);
 registerMethods(program);
 registerListen(program);
 registerTrigger(program);
+registerVersion(program);
+registerUpgrade(program);
 registerHelp(program);
 
 program.parseAsync(process.argv).catch(handleError);

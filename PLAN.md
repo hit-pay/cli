@@ -84,4 +84,4 @@ Global flags (one-off, not persisted):
 - [ ] Register first-party OAuth app per environment
 - [ ] Replace placeholder `OAUTH_CLIENT_IDS` with registered app IDs per environment
 - [ ] CI workflow (test + typecheck)
-- [ ] npm publish `@hit-pay/cli`
+- [ ] npm publish `@hitpay/cli`

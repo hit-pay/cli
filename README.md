@@ -5,13 +5,13 @@ Manage payments, test webhooks, and generate QR codes from the terminal. The off
 ## Installation
 
 ```bash
-npm install -g @hit-pay/cli
+npm install -g @hitpay/cli
 ```
 
 Or run directly:
 
 ```bash
-npx @hit-pay/cli --help
+npx @hitpay/cli --help
 ```
 
 ## Quick Start
@@ -218,7 +218,7 @@ Run `hitpay help` for a grouped overview of all commands.
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| **CLI** (this) | Terminal-native developer workflows | `npm i -g @hit-pay/cli` |
+| **CLI** (this) | Terminal-native developer workflows | `npm i -g @hitpay/cli` |
 | [Claude Code Plugin](https://docs.hitpayapp.com/apis/guide/claude-code-plugin) | AI-powered integration in Claude Code | `claude plugin add hit-pay/claude-code-plugin` |
 | [Agent Skills](https://docs.hitpayapp.com/apis/guide/ai-skills) | Code generation for Cursor, Copilot, Windsurf | `npx skills add hit-pay/agent-skills` |
 | [MCP Server](https://www.npmjs.com/package/hitpay-mcp) | 39 MCP tools for AI agents | `npx hitpay-mcp` |
