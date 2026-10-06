@@ -82,7 +82,7 @@ Supported environments: `local`, `staging`, `sandbox`, `production`.
 hitpay login                            # One-time code, approved in the dashboard (active environment)
 ```
 
-`hitpay login` prints a one-time code and opens the dashboard. Check that the code matches, choose the business and approve; the CLI picks up the token on its own. If no browser opens (SSH, containers), open the printed URL on any device.
+`hitpay login` prints a one-time code and opens the dashboard. Type the code in, choose the business and approve; the CLI picks up the token on its own. If no browser opens (SSH, containers), open the printed URL on any device.
 
 `hitpay login` uses the **active environment**. Switch first with `hitpay env use <env>` — do not pass `--env` to login.
 

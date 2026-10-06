@@ -10,7 +10,7 @@ import { pollDeviceToken, requestDeviceCode } from './token-manager.js';
 
 export interface OAuthLoginOptions {
   environment: Environment;
-  /** Called with the code the user confirms in the dashboard, before the browser opens. */
+  /** Called with the code the user types into the dashboard, before the browser opens. */
   onUserCode?: (userCode: string, verificationUri: string) => void;
   onWaitingForAuth?: () => void;
 }
@@ -33,12 +33,12 @@ export function formatUserCode(userCode: string): string {
 export async function loginWithOAuth(options: OAuthLoginOptions): Promise<OAuthLoginResult> {
   const env = options.environment;
   const device = await requestDeviceCode(env);
-  const verificationUrl = device.verification_uri_complete ?? device.verification_uri;
-
-  options.onUserCode?.(formatUserCode(device.user_code), verificationUrl);
+  // Open the page without the code in the URL: the user types it in, so they
+  // have to look at this terminal rather than approve a link someone sent.
+  options.onUserCode?.(formatUserCode(device.user_code), device.verification_uri);
 
   try {
-    await openBrowser(verificationUrl);
+    await openBrowser(device.verification_uri);
   } catch {
     // Headless or no browser — the user opens the printed URL themselves
   }

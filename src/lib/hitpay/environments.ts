@@ -34,7 +34,8 @@ interface EnvironmentDefinition {
 export const OAUTH_CLIENT_ID = '01a10f6f-abb2-71c0-8849-c048c938142d';
 
 /** Scopes requested during CLI OAuth login (must match scopes enabled on the OAuth app). */
-export const OAUTH_LOGIN_SCOPE = 'business:read payments commerce customer';
+export const OAUTH_LOGIN_SCOPE =
+  'business:read payments commerce customer balances:read webhooks';
 
 export const ENVIRONMENTS: Record<Environment, EnvironmentDefinition> = {
   local: {

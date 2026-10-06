@@ -99,8 +99,10 @@ describe('Environments (pure)', () => {
     expect(OAUTH_CLIENT_ID).toBe('01a10f6f-abb2-71c0-8849-c048c938142d');
   });
 
-  it('requests the default oauth scopes plus customer during login', () => {
-    expect(OAUTH_LOGIN_SCOPE).toBe('business:read payments commerce customer');
+  it('requests the scopes the cli commands need during login', () => {
+    expect(OAUTH_LOGIN_SCOPE).toBe(
+      'business:read payments commerce customer balances:read webhooks',
+    );
   });
 });
 

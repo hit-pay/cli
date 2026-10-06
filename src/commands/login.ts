@@ -41,7 +41,7 @@ export function registerLogin(program: Command): void {
           onUserCode: (userCode, verificationUrl) => {
             spinner.stop();
             output.info(`Your login code: ${userCode}`);
-            output.info(`Confirm it in your browser: ${verificationUrl}`);
+            output.info(`Enter it at: ${verificationUrl}`);
           },
           onWaitingForAuth: () => {
             spinner.text = 'Waiting for approval in browser...';
