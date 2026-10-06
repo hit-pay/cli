@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { formatCurrency } from '../lib/hitpay/formatters.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -39,8 +39,7 @@ export function registerPlan(program: Command): void {
     .option('--cycle-repeat <n>', 'Number of billing cycles (0 = unlimited)')
     .action(async (opts, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Creating plan...');
         spinner.start();
@@ -80,8 +79,7 @@ export function registerPlan(program: Command): void {
     .description('List subscription plans')
     .action(async (_, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching plans...');
         spinner.start();
@@ -114,8 +112,7 @@ export function registerPlan(program: Command): void {
     .description('Get subscription plan details')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching plan...');
         spinner.start();
@@ -148,8 +145,7 @@ export function registerPlan(program: Command): void {
     .description('Delete a subscription plan')
     .action(async (id: string, _, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Deleting plan...');
         spinner.start();

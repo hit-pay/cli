@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import type { AccountStatusResponse } from '../lib/hitpay/types.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -16,8 +16,7 @@ export function registerAccount(program: Command): void {
     .description('Show KYC verification and enabled payment providers')
     .action(async (_, cmd) => {
       try {
-        const globalOpts = cmd.parent?.parent?.opts() || {};
-        const client = createClient({ environment: globalOpts.env });
+        const client = await createClientFromCmd(cmd);
 
         const spinner = createSpinner('Fetching account status...');
         spinner.start();

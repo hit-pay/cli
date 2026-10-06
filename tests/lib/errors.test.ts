@@ -10,6 +10,11 @@ describe('HitPayApiError', () => {
     expect(err.suggestion).toContain('API key');
   });
 
+  it('suggests OAuth re-login for 401 when using bearer auth', () => {
+    const err = new HitPayApiError(401, { message: 'Unauthorized' }, '/v1/test', 'oauth');
+    expect(err.suggestion).toContain('hitpay login');
+  });
+
   it('includes validation details', () => {
     const err = new HitPayApiError(
       422,

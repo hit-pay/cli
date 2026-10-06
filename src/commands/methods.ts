@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { formatPaymentMethod } from '../lib/hitpay/formatters.js';
 import type { AccountStatusResponse } from '../lib/hitpay/types.js';
-import { createClient } from '../lib/client.js';
+import { createClientFromCmd } from '../lib/client.js';
 import { createSpinner } from '../lib/spinner.js';
 import * as output from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
@@ -64,8 +64,7 @@ export function registerMethods(program: Command): void {
       try {
         if (opts.live) {
           // Fetch live account status to check enabled providers
-          const globalOpts = cmd.parent?.opts() || {};
-          const client = createClient({ environment: globalOpts.env });
+          const client = await createClientFromCmd(cmd);
 
           const spinner = createSpinner('Checking enabled methods...');
           spinner.start();
