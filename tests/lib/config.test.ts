@@ -99,10 +99,8 @@ describe('Environments (pure)', () => {
     expect(OAUTH_CLIENT_ID).toBe('01a10f6f-abb2-71c0-8849-c048c938142d');
   });
 
-  it('requests business and payment scopes during oauth login', () => {
-    expect(OAUTH_LOGIN_SCOPE).toContain('business:read');
-    expect(OAUTH_LOGIN_SCOPE).toContain('payments:create');
-    expect(OAUTH_LOGIN_SCOPE).toContain('payments:read');
+  it('requests the default oauth scopes plus customer during login', () => {
+    expect(OAUTH_LOGIN_SCOPE).toBe('business:read payments commerce customer');
   });
 });
 
