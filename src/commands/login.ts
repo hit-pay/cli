@@ -20,9 +20,8 @@ const AUTH_HINT = 'Run `hitpay login` or `hitpay config set api_key <key>`.';
 export function registerLogin(program: Command): void {
   program
     .command('login')
-    .description('Sign in via browser (OAuth)')
-    .option('--oauth-port <port>', 'Local OAuth callback port', '8085')
-    .action(async (opts, cmd) => {
+    .description('Sign in via browser with a one-time code (OAuth)')
+    .action(async (_opts, cmd) => {
       try {
         const globalOpts = getGlobalOpts(cmd);
         if (globalOpts.env) {
@@ -34,17 +33,19 @@ export function registerLogin(program: Command): void {
         const config = readConfig();
         const env = getActiveEnvironment(config);
 
-        const spinner = createSpinner('Opening browser for sign-in...', { discardStdin: false });
+        const spinner = createSpinner('Requesting a login code...', { discardStdin: false });
         spinner.start();
 
         await loginWithOAuth({
           environment: env,
-          port: Number(opts.oauthPort),
-          onWaitingForAuth: () => {
-            spinner.text = 'Waiting for authorization in browser...';
+          onUserCode: (userCode, verificationUrl) => {
+            spinner.stop();
+            output.info(`Your login code: ${userCode}`);
+            output.info(`Confirm it in your browser: ${verificationUrl}`);
           },
-          onCompleting: () => {
-            spinner.text = 'Completing sign-in...';
+          onWaitingForAuth: () => {
+            spinner.text = 'Waiting for approval in browser...';
+            spinner.start();
           },
         });
 

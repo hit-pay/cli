@@ -1,9 +1,10 @@
 import {
   type Environment,
   type OAuthCredentials,
-  getOAuthClientId,
+  getOAuthDeviceCodeUrl,
   getOAuthTokenUrl,
-  hasOAuthClientId,
+  OAUTH_CLIENT_ID,
+  OAUTH_LOGIN_SCOPE,
 } from '../hitpay/environments.js';
 import {
   type HitPayConfig,
@@ -20,7 +21,27 @@ interface TokenResponse {
   token_type?: string;
 }
 
+export interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete?: string;
+  expires_in: number;
+  interval?: number;
+}
+
+/** Token endpoint error carrying the OAuth `error` code (e.g. `authorization_pending`). */
+export class OAuthTokenError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
 const REFRESH_BUFFER_SECONDS = 300;
+const DEVICE_CODE_GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 
 export function isOAuthExpired(oauth: OAuthCredentials): boolean {
   return oauth.expires_at <= Math.floor(Date.now() / 1000) + REFRESH_BUFFER_SECONDS;
@@ -39,7 +60,13 @@ async function exchangeToken(env: Environment, body: URLSearchParams): Promise<O
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`OAuth token exchange failed (${res.status}): ${text}`);
+    let code: string | undefined;
+    try {
+      code = (JSON.parse(text) as { error?: string }).error;
+    } catch {
+      // Non-JSON error body
+    }
+    throw new OAuthTokenError(`OAuth token exchange failed (${res.status}): ${text}`, code);
   }
 
   const data = (await res.json()) as TokenResponse;
@@ -57,14 +84,9 @@ export async function refreshOAuthToken(
   env: Environment,
   oauth: OAuthCredentials,
 ): Promise<OAuthCredentials> {
-  const clientId = getOAuthClientId(env);
-  if (!hasOAuthClientId(env)) {
-    throw new Error(`OAuth is not configured for environment "${env}".`);
-  }
-
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
-    client_id: clientId,
+    client_id: OAUTH_CLIENT_ID,
     refresh_token: oauth.refresh_token,
   });
 
@@ -94,27 +116,55 @@ export async function ensureValidOAuthToken(
   return { accessToken: refreshed.access_token, config: updated };
 }
 
-export async function exchangeAuthorizationCode(
-  env: Environment,
-  code: string,
-  redirectUri: string,
-  codeVerifier: string,
-): Promise<OAuthCredentials> {
-  if (!hasOAuthClientId(env)) {
-    throw new Error(
-      `OAuth client ID is not configured for "${env}". Register the HitPay CLI OAuth app first.`,
-    );
-  }
-
-  const clientId = getOAuthClientId(env);
-
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    code,
-    code_verifier: codeVerifier,
+/** Starts the device authorization flow (RFC 8628) and returns the code to show the user. */
+export async function requestDeviceCode(env: Environment): Promise<DeviceCodeResponse> {
+  const res = await environmentFetch(env, getOAuthDeviceCodeUrl(env), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json',
+    },
+    body: new URLSearchParams({ client_id: OAUTH_CLIENT_ID, scope: OAUTH_LOGIN_SCOPE }),
   });
 
-  return exchangeToken(env, body);
+  if (!res.ok) {
+    throw new Error(`Device authorization request failed (${res.status}): ${await res.text()}`);
+  }
+
+  return (await res.json()) as DeviceCodeResponse;
+}
+
+/** Polls the token endpoint until the user approves or denies the code in the dashboard. */
+export async function pollDeviceToken(
+  env: Environment,
+  device: DeviceCodeResponse,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<OAuthCredentials> {
+  const body = new URLSearchParams({
+    grant_type: DEVICE_CODE_GRANT,
+    client_id: OAUTH_CLIENT_ID,
+    device_code: device.device_code,
+  });
+  const deadline = Date.now() + device.expires_in * 1000;
+  let interval = device.interval ?? 5;
+
+  while (Date.now() < deadline) {
+    await sleep(interval * 1000);
+
+    try {
+      return await exchangeToken(env, body);
+    } catch (err) {
+      const code = err instanceof OAuthTokenError ? err.code : undefined;
+      if (code === 'authorization_pending') continue;
+      if (code === 'slow_down') {
+        interval += 5;
+        continue;
+      }
+      if (code === 'access_denied') throw new Error('Login was denied in the browser.');
+      if (code === 'expired_token') break;
+      throw err;
+    }
+  }
+
+  throw new Error('The login code expired. Run `hitpay login` again.');
 }
