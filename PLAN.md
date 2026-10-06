@@ -44,7 +44,7 @@ Stored at `~/.hitpay/config.json` (mode `0600`):
 
 | Method | Command | Notes |
 |--------|---------|-------|
-| OAuth | `hitpay login` | Browser PKCE flow; tokens saved to active profile |
+| OAuth | `hitpay login` | Device authorization grant (RFC 8628); tokens saved to active profile |
 | API key | `hitpay config set api_key <key>` | Verified against API; takes priority over OAuth |
 | Logout | `hitpay logout` / `hitpay logout --all` | Clears OAuth; `--all` also clears API key + salt |
 
@@ -74,14 +74,13 @@ Global flags (one-off, not persisted):
 
 ## OAuth implementation
 
-- `src/lib/auth/pkce.ts` — PKCE S256 + state
-- `src/lib/auth/oauth.ts` — localhost callback server + browser open
-- `src/lib/auth/token-manager.ts` — refresh + expiry buffer
-- `oauthClientId` per environment hardcoded in `OAUTH_CLIENT_IDS` (`environments.ts`) — baked into build
+- `src/lib/auth/oauth.ts` — request device code, show user code, open `dashboard/oauth/device`
+- `src/lib/auth/token-manager.ts` — device code request + polling (`authorization_pending` / `slow_down`), refresh + expiry buffer
+- The OAuth app must be public (no secret) with grant types `urn:ietf:params:oauth:grant-type:device_code` and `refresh_token`
+- One fixed client ID for every environment (`HITPAY_CLI_CLIENT_ID` in `environments.ts`), created by the core migration `create_hitpay_cli_oauth_client`
 
 ## Pre-publish checklist
 
-- [ ] Register first-party OAuth app per environment
-- [ ] Replace placeholder `OAUTH_CLIENT_IDS` with registered app IDs per environment
+- [x] Register first-party OAuth app per environment (core migration)
 - [ ] CI workflow (test + typecheck)
 - [ ] npm publish `@hitpay/cli`

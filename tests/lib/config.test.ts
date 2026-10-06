@@ -10,10 +10,9 @@ import {
   ENVIRONMENT_NAMES,
   getApiBaseUrl,
   getDashboardBaseUrl,
-  getOAuthAuthorizeUrl,
+  getOAuthDeviceCodeUrl,
   getOAuthTokenUrl,
-  getOAuthClientId,
-  hasOAuthClientId,
+  OAUTH_CLIENT_ID,
   isEnvironment,
   OAUTH_LOGIN_SCOPE,
 } from '../../src/lib/hitpay/environments.js';
@@ -87,8 +86,8 @@ describe('Environments (pure)', () => {
   });
 
   it('builds OAuth URLs from environment definitions', () => {
-    expect(getOAuthAuthorizeUrl('sandbox')).toBe(
-      'https://dashboard.sandbox.hit-pay.com/oauth/authorize',
+    expect(getOAuthDeviceCodeUrl('sandbox')).toBe(
+      'https://api.sandbox.hit-pay.com/v1/open/oauth/device/code',
     );
     expect(getOAuthTokenUrl('staging')).toBe(
       'https://api.staging.hit-pay.com/v1/open/oauth/token',
@@ -96,19 +95,14 @@ describe('Environments (pure)', () => {
     expect(getOAuthTokenUrl('local')).toBe('https://api.src.test/v1/open/oauth/token');
   });
 
-  it('includes hardcoded oauth client ids for every environment', () => {
-    for (const env of ENVIRONMENT_NAMES) {
-      expect(getOAuthClientId(env)).toBeTruthy();
-      expect(hasOAuthClientId(env)).toBe(true);
-    }
-    expect(getOAuthClientId('sandbox')).toBe('hitpay-cli-sandbox');
-    expect(getOAuthClientId('production')).toBe('hitpay-cli-production');
+  it('uses one fixed oauth client id for every environment', () => {
+    expect(OAUTH_CLIENT_ID).toBe('01a10f6f-abb2-71c0-8849-c048c938142d');
   });
 
-  it('requests business and payment scopes during oauth login', () => {
-    expect(OAUTH_LOGIN_SCOPE).toContain('business:read');
-    expect(OAUTH_LOGIN_SCOPE).toContain('payments:create');
-    expect(OAUTH_LOGIN_SCOPE).toContain('payments:read');
+  it('requests the scopes the cli commands need during login', () => {
+    expect(OAUTH_LOGIN_SCOPE).toBe(
+      'business:read payments commerce customer balances:read webhooks',
+    );
   });
 });
 
